@@ -26,9 +26,16 @@ import {
   limit,
   serverTimestamp,
   Firestore,
-  deleteDoc
+  deleteDoc,
+  setLogLevel,
+  disableNetwork
 } from 'firebase/firestore';
 import { ConversionHistoryItem, UserProfileData } from '../types';
+
+// Silence internal Firestore connection retries when APIs are disabled or offline
+try {
+  setLogLevel('silent');
+} catch (_) {}
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDhATviOzuYUSc6XNXAuFIX7_nMMtiokJE',
@@ -110,6 +117,9 @@ export const formatAuthError = (err: any): string => {
     case 'auth/operation-not-allowed':
       return 'This authentication method is not enabled in your Firebase Console. Please enable Email/Password or Google under Authentication > Sign-in method.';
     default:
+      if (err.message && (err.message.includes('token-service-api-has-not-been-used') || err.message.includes('securetoken.googleapis.com'))) {
+        return 'The Google Cloud Token Service API (securetoken.googleapis.com) is not enabled for project 278142126860. Please enable it in the Google Cloud Console or activate a sign-in provider in Firebase Console.';
+      }
       return err.message || 'Authentication failed. Please try again.';
   }
 };
@@ -139,21 +149,19 @@ export const registerWithEmail = async (name: string, email: string, pass: strin
     console.warn('Could not send verification email:', e);
   }
 
-  // Store user document in Firestore
+  // Store user document in Firestore asynchronously without blocking registration
   if (db) {
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        displayName: name.trim() || null,
-        photoURL: null,
-        createdAt: serverTimestamp(),
-        conversionsCount: 0
-      }, { merge: true });
-    } catch (e) {
-      console.warn('Could not store user profile in Firestore:', e);
-    }
+    const userRef = doc(db, 'users', user.uid);
+    setDoc(userRef, {
+      uid: user.uid,
+      email: user.email,
+      displayName: name.trim() || null,
+      photoURL: null,
+      createdAt: serverTimestamp(),
+      conversionsCount: 0
+    }, { merge: true }).catch((e) => {
+      console.warn('Could not store user profile in Firestore (offline mode active):', e);
+    });
   }
 
   return user;
@@ -177,24 +185,19 @@ export const loginWithGoogle = async (): Promise<User> => {
   const credential = await signInWithPopup(auth, googleProvider);
   const user = credential.user;
 
-  // Sync profile document to Firestore
+  // Sync profile document to Firestore asynchronously without blocking login
   if (db) {
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      const snap = await getDoc(userRef);
-      if (!snap.exists()) {
-        await setDoc(userRef, {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || null,
-          photoURL: user.photoURL || null,
-          createdAt: serverTimestamp(),
-          conversionsCount: 0
-        });
-      }
-    } catch (e) {
-      console.warn('Firestore user profile sync warning:', e);
-    }
+    const userRef = doc(db, 'users', user.uid);
+    setDoc(userRef, {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName || null,
+      photoURL: user.photoURL || null,
+      createdAt: serverTimestamp(),
+      conversionsCount: 0
+    }, { merge: true }).catch((e) => {
+      console.warn('Firestore user profile sync warning (offline mode active):', e);
+    });
   }
 
   return user;
@@ -266,23 +269,24 @@ export const saveConversionRecord = async (
     console.warn('Could not save history to localStorage:', e);
   }
 
-  // Also sync to Firestore if signed in and db is ready
+  // Non-blocking sync to Firestore if signed in and db is ready
   if (auth?.currentUser && db) {
-    try {
-      await addDoc(collection(db, 'users', auth.currentUser.uid, 'conversions'), {
-        toolId: record.toolId,
-        toolName: record.toolName,
-        inputFileName: record.inputFileName,
-        inputFileSize: record.inputFileSize,
-        outputFileName: record.outputFileName,
-        outputFileSize: record.outputFileSize,
-        status: record.status,
-        details: record.details || '',
-        createdAt: serverTimestamp()
-      });
-    } catch (e) {
-      console.warn('Could not sync conversion to Firestore:', e);
-    }
+    addDoc(collection(db, 'users', auth.currentUser.uid, 'conversions'), {
+      toolId: record.toolId,
+      toolName: record.toolName,
+      inputFileName: record.inputFileName,
+      inputFileSize: record.inputFileSize,
+      outputFileName: record.outputFileName,
+      outputFileSize: record.outputFileSize,
+      status: record.status,
+      details: record.details || '',
+      createdAt: serverTimestamp()
+    }).catch((e) => {
+      console.warn('Could not sync conversion to Firestore (offline mode active):', e?.message || e);
+      try {
+        disableNetwork(db).catch(() => {});
+      } catch (_) {}
+    });
   }
 
   return record;
@@ -300,7 +304,7 @@ export const fetchConversionRecords = async (uid?: string): Promise<ConversionHi
     console.warn('Error reading local history:', e);
   }
 
-  // If user is authenticated and db is ready, try to query latest from Firestore
+  // If user is authenticated and db is ready, try to query latest from Firestore with timeout protection
   if (auth?.currentUser && db && targetUid !== 'guest') {
     try {
       const q = query(
@@ -308,8 +312,14 @@ export const fetchConversionRecords = async (uid?: string): Promise<ConversionHi
         orderBy('createdAt', 'desc'),
         limit(50)
       );
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
+      
+      const queryPromise = getDocs(q);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Firestore network timeout')), 2500)
+      );
+
+      const snapshot = await Promise.race([queryPromise, timeoutPromise]);
+      if (snapshot && !snapshot.empty) {
         const firestoreRecords: ConversionHistoryItem[] = snapshot.docs.map(docSnap => {
           const data = docSnap.data();
           const timestamp = data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now();
@@ -328,8 +338,11 @@ export const fetchConversionRecords = async (uid?: string): Promise<ConversionHi
         });
         return firestoreRecords;
       }
-    } catch (e) {
-      console.warn('Could not fetch conversions from Firestore, using local cache:', e);
+    } catch (e: any) {
+      console.warn('Could not fetch conversions from Firestore, using local cache:', e?.message || e);
+      try {
+        disableNetwork(db).catch(() => {});
+      } catch (_) {}
     }
   }
 
