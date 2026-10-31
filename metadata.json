@@ -1,0 +1,6 @@
+{
+  "name": "ConvertPro - Modern PDF & Image Conversion Platform",
+  "description": "Professional, client-side PDF and image conversion platform. Fast, private, browser-based processing with Firebase authentication and user dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User profile document: only the authenticated user can read and modify their profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Activity / Conversion history: user can read, create, and delete their own history entries
+      match /conversions/{conversionId} {
+        allow read, create, delete: if request.auth != null && request.auth.uid == userId;
+        allow update: if false;
+      }
+
+      // Legacy activity path compatibility
+      match /activity/{activityId} {
+        allow read, create, delete: if request.auth != null && request.auth.uid == userId;
+        allow update: if false;
+      }
+    }
+
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
