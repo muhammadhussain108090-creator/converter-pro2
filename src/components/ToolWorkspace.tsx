@@ -85,6 +85,7 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
 }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [conversionSuccess, setConversionSuccess] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
   const [progressStatus, setProgressStatus] = useState('');
@@ -248,7 +249,7 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
       return;
     }
 
-    setProcessing(true);
+    setIsProcessing(true);
     setProgressPercent(10);
     setProgressStatus('Starting process...');
 
@@ -493,7 +494,7 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
       console.error(err);
       onShowNotice('error', err?.message || 'Processing failed. Please check your files.');
     } finally {
-      setProcessing(false);
+      setIsProcessing(false);
     }
   };
 
@@ -1302,7 +1303,7 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
             </div>
 
             {/* Progress Indicator */}
-            {processing && (
+            {isProcessing && (
               <div className="pt-4 space-y-2 animate-in fade-in">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-zinc-700 dark:text-zinc-300">
@@ -1324,11 +1325,11 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
             {/* Action Button */}
             <button
               type="button"
-              disabled={processing || files.length === 0}
+              disabled={isProcessing || files.length === 0}
               onClick={handleExecuteTool}
               className="w-full h-12 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm shadow-md shadow-indigo-600/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
             >
-              {processing ? (
+              {isProcessing ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Processing...</span>
@@ -1342,7 +1343,7 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
             </button>
 
             {/* Result Download Card */}
-            {result && !processing && (
+            {result && !isProcessing && (
               <div className="mt-6 p-6 rounded-3xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 animate-in fade-in duration-300">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-start gap-3">

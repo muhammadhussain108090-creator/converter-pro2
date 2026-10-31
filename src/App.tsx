@@ -23,28 +23,42 @@ export default function App() {
 
   // Dark Mode State
   const [darkMode, setDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('convertpro_theme');
-    if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('convertpro_theme') : null;
+      if (saved) return saved === 'dark';
+      return typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
+    } catch {
+      return false;
+    }
   });
 
   // Apply dark mode class to html document element
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('convertpro_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('convertpro_theme', 'light');
+    try {
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('convertpro_theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('convertpro_theme', 'light');
+      }
+    } catch (e) {
+      console.warn('LocalStorage access warning:', e);
     }
   }, [darkMode]);
 
   // Firebase auth state listener
   useEffect(() => {
     if (!auth) return;
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (currentUser) => {
+        setUser(currentUser);
+      },
+      (error) => {
+        console.warn('Firebase Auth state listener error:', error);
+      }
+    );
     return () => unsubscribe();
   }, []);
 
