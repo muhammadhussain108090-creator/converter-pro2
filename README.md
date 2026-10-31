@@ -136,6 +136,31 @@ netlify deploy --prod --dir=dist
 
 ---
 
+## 🐙 How to Deploy on GitHub Pages
+
+ConvertPro is pre-configured with relative base paths (`base: './'`), SPA 404 routing, and an automated GitHub Actions deployment workflow (`.github/workflows/deploy.yml`).
+
+### Step-by-Step Setup:
+1. **Push your code to GitHub**:
+   ```bash
+   git add .
+   git commit -m "Configure GitHub Pages deployment"
+   git push origin main
+   ```
+2. **Enable GitHub Actions for Pages**:
+   - Go to your repository on GitHub.
+   - Click on **Settings** → **Pages** (under "Code and automation").
+   - Under **Build and deployment** → **Source**, select **GitHub Actions**.
+3. **Configure Firebase Authorized Domains**:
+   - Go to the [Firebase Console](https://console.firebase.google.com/) → **Authentication** → **Settings** → **Authorized domains**.
+   - Add your GitHub Pages domain: `<username>.github.io`.
+4. **Trigger Deployment**:
+   - Whenever you push to `main` (or `master`), the workflow in `.github/workflows/deploy.yml` will automatically build the project and deploy the `dist` bundle.
+   - You can track the status in the **Actions** tab of your repository.
+   - Your live site will be accessible at: `https://<username>.github.io/<repository-name>/`.
+
+---
+
 ## 🔍 Features Requiring Backend or Cloud Configuration
 
 ConvertPro was intentionally engineered to run entirely client-side without costly server infrastructure. However, certain enterprise document operations inherently require specialized server engines:

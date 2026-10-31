@@ -47,12 +47,36 @@ export const firebaseReady = Boolean(
   !config.apiKey.includes('YOUR_')
 );
 
-export const app: FirebaseApp | null = firebaseReady
-  ? (getApps().length ? getApps()[0] : initializeApp(config))
-  : null;
+export const app: FirebaseApp | null = (() => {
+  if (!firebaseReady) return null;
+  try {
+    return getApps().length ? getApps()[0] : initializeApp(config);
+  } catch (err) {
+    console.warn('Firebase initialization error (safe fallback enabled):', err);
+    return null;
+  }
+})();
 
-export const auth: Auth | null = app ? getAuth(app) : null;
-export const db: Firestore | null = app ? getFirestore(app) : null;
+export const auth: Auth | null = (() => {
+  if (!app) return null;
+  try {
+    return getAuth(app);
+  } catch (err) {
+    console.warn('Firebase Auth initialization error (safe fallback enabled):', err);
+    return null;
+  }
+})();
+
+export const db: Firestore | null = (() => {
+  if (!app) return null;
+  try {
+    return getFirestore(app);
+  } catch (err) {
+    console.warn('Firestore initialization error (safe fallback enabled):', err);
+    return null;
+  }
+})();
+
 export const googleProvider = new GoogleAuthProvider();
 
 // Error message formatter

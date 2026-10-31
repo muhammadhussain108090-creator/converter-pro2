@@ -4,15 +4,30 @@ import { PdfMetadataInfo } from '../types';
 import { parsePageRange, parsePagesToDelete } from './pureLogic';
 
 export const saveBlob = (blob: Blob, name: string): void => {
+  if (!blob || !(blob instanceof Blob)) {
+    console.error('Cannot download: blob is invalid', blob);
+    throw new Error('Download failed: output file is empty or invalid.');
+  }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
+  a.style.display = 'none';
   a.href = url;
   a.download = name;
+
   document.body.appendChild(a);
   a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+  setTimeout(() => {
+    try {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(url);
+    } catch (_) {}
+  }, 60000); // 60 seconds ensures stream is finished and prevents premature cancellation
 };
+
 
 export const loadPdfDocument = async (file: File): Promise<PDFDocument> => {
   const arrayBuffer = await file.arrayBuffer();

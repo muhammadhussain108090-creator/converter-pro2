@@ -84,10 +84,11 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
   onShowNotice
 }) => {
   const [files, setFiles] = useState<File[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [processing, setProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [conversionSuccess, setConversionSuccess] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
   const [progressStatus, setProgressStatus] = useState('');
+  const [downloadCount, setDownloadCount] = useState(0);
   const [result, setResult] = useState<{
     blob: Blob;
     fileName: string;
