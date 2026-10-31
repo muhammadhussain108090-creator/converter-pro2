@@ -233,7 +233,16 @@ export const validateFileSelection = (
   }
 
   const pdfTools = ['merge', 'split', 'rotate', 'extract-pages', 'delete-pages', 'pdf-metadata', 'pdf-to-word', 'pdf-protect'];
-  const imageTools = ['compress-image', 'resize-image', 'convert-image', 'crop-image'];
+  const imageTools = [
+    'compress-image',
+    'resize-image',
+    'convert-image',
+    'crop-image',
+    'images-pdf',
+    'image-to-jpg',
+    'image-to-png',
+    'image-to-webp'
+  ];
   const docTools = ['word-to-pdf'];
 
   if (pdfTools.includes(toolId)) {

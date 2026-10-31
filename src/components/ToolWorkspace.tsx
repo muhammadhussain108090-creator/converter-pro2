@@ -355,9 +355,18 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
         outputFileName = safeName(files[0].name, compRes.extension, 'compressed');
         savingsPct = compRes.savingsPercent;
       } else if (tool.id === 'resize-image') {
-        const w = Number(resizeWidth);
-        const h = Number(resizeHeight);
-        if (!w && !h) throw new Error('Please specify at least a width or height.');
+        let w = Number(resizeWidth);
+        let h = Number(resizeHeight);
+        if (!w && !h) {
+          if (originalDimensions) {
+            w = originalDimensions.w;
+            h = originalDimensions.h;
+          } else {
+            const img = await loadImage(files[0]);
+            w = img.naturalWidth || img.width || 800;
+            h = img.naturalHeight || img.height || 600;
+          }
+        }
         const resRes = await resizeImage(
           files[0],
           w,
@@ -372,6 +381,44 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
         );
         outputBlob = resRes.blob;
         outputFileName = safeName(files[0].name, resRes.extension, 'resized');
+      } else if (tool.id === 'image-to-jpg') {
+        const convRes = await convertImage(
+          files[0],
+          'image/jpeg',
+          convertQuality / 100,
+          (p, s) => {
+            setProgressPercent(p);
+            setProgressStatus(s);
+          }
+        );
+        outputBlob = convRes.blob;
+        outputFileName = safeName(files[0].name, 'jpg', 'converted');
+        savingsPct = convRes.savingsPercent;
+      } else if (tool.id === 'image-to-png') {
+        const convRes = await convertImage(
+          files[0],
+          'image/png',
+          1.0,
+          (p, s) => {
+            setProgressPercent(p);
+            setProgressStatus(s);
+          }
+        );
+        outputBlob = convRes.blob;
+        outputFileName = safeName(files[0].name, 'png', 'converted');
+      } else if (tool.id === 'image-to-webp') {
+        const convRes = await convertImage(
+          files[0],
+          'image/webp',
+          convertQuality / 100,
+          (p, s) => {
+            setProgressPercent(p);
+            setProgressStatus(s);
+          }
+        );
+        outputBlob = convRes.blob;
+        outputFileName = safeName(files[0].name, 'webp', 'converted');
+        savingsPct = convRes.savingsPercent;
       } else if (tool.id === 'convert-image') {
         const convRes = await convertImage(
           files[0],
@@ -384,6 +431,7 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
         );
         outputBlob = convRes.blob;
         outputFileName = safeName(files[0].name, convRes.extension, 'converted');
+        savingsPct = convRes.savingsPercent;
       } else if (tool.id === 'crop-image') {
         const cropRes = await cropImage(
           files[0],
@@ -421,17 +469,21 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
         savings: savingsPct
       });
 
-      // Save activity record to Firestore / LocalStorage
-      await saveConversionRecord({
-        toolId: tool.id,
-        toolName: tool.name,
-        inputFileName: files.length === 1 ? files[0].name : `${files.length} files`,
-        inputFileSize: totalInputBytes,
-        outputFileName,
-        outputFileSize: outputBlob.size,
-        status: 'success',
-        details: savingsPct ? `${savingsPct}% size reduction` : undefined
-      });
+      // Save activity record to Firestore / LocalStorage (safe, non-blocking)
+      try {
+        await saveConversionRecord({
+          toolId: tool.id,
+          toolName: tool.name,
+          inputFileName: files.length === 1 ? files[0].name : `${files.length} files`,
+          inputFileSize: totalInputBytes,
+          outputFileName,
+          outputFileSize: outputBlob.size,
+          status: 'success',
+          details: savingsPct ? `${savingsPct}% size reduction` : undefined
+        });
+      } catch (logErr) {
+        console.warn('Activity logging notice:', logErr);
+      }
 
       // Auto trigger download for frictionless UX
       saveBlob(outputBlob, outputFileName);
@@ -1083,7 +1135,38 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
                 </div>
               )}
 
-              {/* CONVERT IMAGE */}
+              {/* DEDICATED IMAGE CONVERSIONS (JPG, PNG, WebP) & CONVERT IMAGE */}
+              {(tool.id === 'image-to-jpg' || tool.id === 'image-to-webp') && (
+                <div className="bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700/60 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    <span>Output Quality: {convertQuality}%</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+                      {convertQuality > 85 ? 'High Quality (Default)' : convertQuality > 60 ? 'Balanced' : 'Smallest Size'}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="20"
+                    max="100"
+                    step="5"
+                    value={convertQuality}
+                    onChange={(e) => setConvertQuality(Number(e.target.value))}
+                    className="w-full accent-indigo-600 cursor-pointer"
+                  />
+                  <p className="text-[11px] text-zinc-400">
+                    {tool.id === 'image-to-jpg' && 'Alpha transparency from PNG/WebP files will be filled with clean white background.'}
+                    {tool.id === 'image-to-webp' && 'Produces ultra-compact next-gen WebP images supported across modern browsers.'}
+                  </p>
+                </div>
+              )}
+
+              {tool.id === 'image-to-png' && (
+                <div className="bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700/60 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  <p className="font-semibold text-zinc-800 dark:text-zinc-200">Lossless PNG Output</p>
+                  <p className="text-[11px] mt-0.5">PNG format preserves full pixel fidelity and transparency without compression artifacts.</p>
+                </div>
+              )}
+
               {tool.id === 'convert-image' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700/60">
                   <div>

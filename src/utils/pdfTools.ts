@@ -291,52 +291,46 @@ export const updatePdfMetadata = async (
   return new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' });
 };
 
-/**
- * Helper to convert any image File into an HTMLImageElement
- */
-const loadImageElement = (file: File): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error(`Failed to load image: ${file.name}`));
-    };
-    img.src = url;
-  });
-};
+import { loadImage } from './imageTools';
 
 /**
- * Helper to convert an image file to JPEG/PNG ArrayBuffer for pdf-lib embedding
+ * Safely embeds any image into a PDFDocument (PNG, JPG, WebP, BMP, SVG, GIF)
+ * Attempts direct embedding first, then falls back to canvas-rendered JPEG.
  */
-const fileToPdfImageBytes = async (file: File): Promise<{ bytes: Uint8Array; isPng: boolean }> => {
+const embedImageSafely = async (pdfDoc: PDFDocument, file: File): Promise<any> => {
   const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
   const isJpg = ['image/jpeg', 'image/jpg'].includes(file.type) || /\.(jpe?g)$/i.test(file.name);
 
   if (isPng || isJpg) {
-    const buffer = await file.arrayBuffer();
-    return { bytes: new Uint8Array(buffer), isPng };
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      if (isPng) {
+        return await pdfDoc.embedPng(bytes);
+      } else {
+        return await pdfDoc.embedJpg(bytes);
+      }
+    } catch (e) {
+      console.warn(`Direct PDF embedding failed for ${file.name}, using canvas normalization:`, e);
+    }
   }
 
-  // Convert WebP, GIF, BMP, SVG to high-quality JPEG
-  const img = await loadImageElement(file);
+  // Fallback: render through HTML5 Canvas into standardized RGB JPEG
+  const img = await loadImage(file);
   const canvas = document.createElement('canvas');
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
+  canvas.width = img.naturalWidth || img.width || 100;
+  canvas.height = img.naturalHeight || img.height || 100;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas rendering context not available.');
+
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0);
 
-  const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.95));
+  const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.92));
   if (!blob) throw new Error(`Could not process image "${file.name}"`);
   const buf = await blob.arrayBuffer();
-  return { bytes: new Uint8Array(buf), isPng: false };
+  return await pdfDoc.embedJpg(new Uint8Array(buf));
 };
 
 /**
@@ -361,8 +355,7 @@ export const imagesToPdf = async (
     const progress = Math.round(15 + ((i + 1) / files.length) * 75);
     onProgress?.(progress, `Processing ${file.name} (${i + 1}/${files.length})...`);
 
-    const { bytes, isPng } = await fileToPdfImageBytes(file);
-    const embeddedImg = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
+    const embeddedImg = await embedImageSafely(pdfDoc, file);
 
     let pageWidth = embeddedImg.width;
     let pageHeight = embeddedImg.height;

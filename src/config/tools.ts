@@ -108,14 +108,50 @@ export const TOOLS: Tool[] = [
     maxFiles: 1
   },
   {
+    id: 'image-to-jpg',
+    name: 'Image to JPG',
+    shortDesc: 'Convert PNG, WebP, GIF, or BMP images into standard JPG.',
+    desc: 'Turn any PNG, WebP, or BMP graphics into universal high-quality JPG images with custom background fills.',
+    category: 'Image',
+    icon: 'RefreshCw',
+    tag: 'Popular',
+    acceptedTypes: ['image/*', '.png', '.webp', '.bmp', '.gif', '.svg'],
+    acceptAttribute: 'image/*',
+    maxFiles: 1
+  },
+  {
+    id: 'image-to-png',
+    name: 'Image to PNG',
+    shortDesc: 'Convert JPG, WebP, or BMP images into lossless PNG.',
+    desc: 'Transform photos and web graphics into crisp, uncompressed PNG files with full transparency support.',
+    category: 'Image',
+    icon: 'RefreshCw',
+    tag: 'Popular',
+    acceptedTypes: ['image/*', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.svg'],
+    acceptAttribute: 'image/*',
+    maxFiles: 1
+  },
+  {
+    id: 'image-to-webp',
+    name: 'Image to WebP',
+    shortDesc: 'Convert images to ultra-compressed modern WebP format.',
+    desc: 'Convert JPG or PNG into next-generation Google WebP images for smaller file sizes and faster page loads.',
+    category: 'Image',
+    icon: 'RefreshCw',
+    tag: 'Popular',
+    acceptedTypes: ['image/*', '.jpg', '.jpeg', '.png', '.bmp', '.gif', '.svg'],
+    acceptAttribute: 'image/*',
+    maxFiles: 1
+  },
+  {
     id: 'convert-image',
     name: 'Convert Image',
     shortDesc: 'Convert smoothly between JPG, PNG, and WebP formats.',
     desc: 'Fast, loss-free browser conversion between major web image formats. Handles alpha transparency cleanly.',
     category: 'Image',
     icon: 'RefreshCw',
-    acceptedTypes: ['image/*', '.jpg', '.jpeg', '.png', '.webp'],
-    acceptAttribute: 'image/jpeg,image/png,image/webp',
+    acceptedTypes: ['image/*', '.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.svg'],
+    acceptAttribute: 'image/*',
     maxFiles: 1
   },
   {
