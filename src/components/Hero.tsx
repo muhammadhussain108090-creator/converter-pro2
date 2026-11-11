@@ -31,10 +31,11 @@ export const Hero: React.FC<HeroProps> = ({ onSearch, onSelectTool }) => {
 
   const quickPicks = [
     { id: 'merge', label: 'Merge PDF' },
+    { id: 'audio-converter', label: 'Audio Converter' },
+    { id: 'video-converter', label: 'Video Converter' },
+    { id: 'video-to-audio', label: 'Extract Audio' },
     { id: 'compress-image', label: 'Compress Image' },
-    { id: 'split', label: 'Split PDF' },
-    { id: 'images-pdf', label: 'Images to PDF' },
-    { id: 'crop-image', label: 'Crop Photo' }
+    { id: 'split', label: 'Split PDF' }
   ];
 
   return (
@@ -59,7 +60,7 @@ export const Hero: React.FC<HeroProps> = ({ onSearch, onSelectTool }) => {
             </h1>
 
             <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-300 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
-              Merge, split, rotate, compress, resize, and convert your PDFs and images directly inside your browser. No files uploaded to foreign servers, ever.
+              Convert, merge, and compress PDFs, images, audio, and video files directly inside your browser. Powered by client-side WebAssembly, Canvas, and Web Audio.
             </p>
 
             {/* Hero Search Box */}

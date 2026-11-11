@@ -157,6 +157,18 @@ export const InfoSections: React.FC = () => {
           </div>
 
           <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-4">
+              <Zap className="w-5 h-5" />
+            </div>
+            <h3 className="font-heading font-bold text-base text-zinc-900 dark:text-white mb-1.5">
+              Audio & Video Transcoding
+            </h3>
+            <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+              Convert MP3, WAV, AAC, FLAC, OGG, M4A, WMA, MP4, MOV, MKV, AVI, and WebM directly in-browser using client-side WebAssembly FFmpeg.
+            </p>
+          </div>
+
+          <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800">
             <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4">
               <FileCheck className="w-5 h-5" />
             </div>
@@ -186,7 +198,11 @@ export const InfoSections: React.FC = () => {
           {[
             {
               q: 'Are my confidential documents uploaded to any server?',
-              a: 'No. All operations (merging, splitting, compressing, resizing, rotating) execute 100% inside your browser using client-side WebAssembly, JavaScript, and Canvas APIs. Your files never leave your device.'
+              a: 'No. All operations (merging, splitting, compressing, resizing, audio and video conversions) execute 100% inside your browser using client-side WebAssembly, JavaScript, and Canvas APIs. Your files never leave your device.'
+            },
+            {
+              q: 'How does in-browser audio and video conversion work?',
+              a: 'ConvertPro utilizes WebAssembly FFmpeg and the HTML5 Web Audio API. Audio and video streams are transcoded directly inside your browser memory without uploading raw media files to remote servers, providing total privacy and instant processing.'
             },
             {
               q: 'What is the maximum file size limit?',

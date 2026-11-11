@@ -141,12 +141,36 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
             </ul>
           </div>
 
-          {/* Documents & Architecture */}
+          {/* Media & Documents */}
           <div>
             <h4 className="font-heading text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 mb-4">
-              Documents & Tech
+              Media & Docs
             </h4>
             <ul className="space-y-2 text-sm">
+              <li>
+                <button
+                  onClick={() => onSelectTool('audio-converter')}
+                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left"
+                >
+                  Audio Converter
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => onSelectTool('video-converter')}
+                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left"
+                >
+                  Video Converter
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => onSelectTool('video-to-audio')}
+                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left"
+                >
+                  Video to Audio
+                </button>
+              </li>
               <li>
                 <button
                   onClick={() => onSelectTool('word-to-pdf')}
@@ -162,9 +186,6 @@ export const Footer: React.FC<FooterProps> = ({ onSelectTool }) => {
                 >
                   PDF to Word (.doc)
                 </button>
-              </li>
-              <li className="pt-2 text-xs text-zinc-500 dark:text-zinc-500">
-                <span>Deployable to Netlify, Vercel, or Firebase Hosting.</span>
               </li>
             </ul>
           </div>

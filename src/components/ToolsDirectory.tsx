@@ -18,7 +18,10 @@ import {
   Sparkles,
   ShieldCheck,
   CheckCircle2,
-  Sliders
+  Sliders,
+  Music,
+  Video,
+  Volume2
 } from 'lucide-react';
 import { TOOLS } from '../config/tools';
 import { Tool, ToolCategory } from '../types';
@@ -41,7 +44,10 @@ const ICON_MAP: Record<string, React.FC<any>> = {
   FileCode,
   FilePlus2,
   Trash2,
-  Info
+  Info,
+  Music,
+  Video,
+  Volume2
 };
 
 export const ToolsDirectory: React.FC<ToolsDirectoryProps> = ({
@@ -51,7 +57,7 @@ export const ToolsDirectory: React.FC<ToolsDirectoryProps> = ({
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<ToolCategory>(initialCategory);
 
-  const categories: ToolCategory[] = ['All', 'PDF', 'Image', 'Document'];
+  const categories: ToolCategory[] = ['All', 'PDF', 'Image', 'Audio', 'Video', 'Document'];
 
   const filteredTools = useMemo(() => {
     return TOOLS.filter((tool) => {

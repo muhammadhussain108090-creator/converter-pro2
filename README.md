@@ -30,7 +30,12 @@ All conversion algorithms execute **100% in-browser** using client-side WebAssem
 - **Word to PDF**: Client-side extraction of text, headings, and structure from `.docx` files using Mammoth and PDF-lib rendering.
 - **PDF to Word**: Extraction of document text and structural pages into an editable Word document format (`.doc`) compatible with Microsoft Word and Google Docs.
 
-### 4. Firebase Authentication & User Dashboard
+### 4. Audio & Video Tools (FFmpeg WASM & Web Audio API)
+- **Audio Converter**: Convert any audio file into MP3, WAV (lossless PCM), AAC, FLAC, OGG, M4A, or WMA with custom bitrate presets (128k, 192k, 256k, 320k), sample rates (44.1 kHz, 48 kHz, 22.05 kHz), and channel control. Includes instant native Web Audio API PCM encoding fallback.
+- **Video Converter**: Transcode videos between MP4 (H.264), MOV, MKV, AVI, and WebM with quality presets (High, Balanced, Compact) and resolution scaling (1080p, 720p, 480p, Original).
+- **Video to Audio**: Extract audio tracks directly from MP4, MOV, MKV, AVI, and WebM video files into MP3, WAV, AAC, OGG, or M4A audio files.
+
+### 5. Firebase Authentication & User Dashboard
 - **Sign Up**: Name, email, password with live strength validation meter.
 - **Email Verification**: Automatic verification link dispatch on registration and one-click resend.
 - **Login**: Email and password with persistent sessions.

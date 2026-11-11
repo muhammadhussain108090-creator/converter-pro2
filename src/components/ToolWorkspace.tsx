@@ -24,9 +24,20 @@ import {
   Sparkles,
   Lock,
   Sliders,
-  Check
+  Check,
+  Music,
+  Video,
+  Volume2,
+  Headphones,
+  Film
 } from 'lucide-react';
-import { Tool, PdfMetadataInfo } from '../types';
+import {
+  Tool,
+  PdfMetadataInfo,
+  AudioTargetFormat,
+  VideoTargetFormat,
+  ExtractedAudioFormat
+} from '../types';
 import {
   formatBytes,
   safeName,
@@ -54,6 +65,11 @@ import {
   ImageProcessingResult
 } from '../utils/imageTools';
 import { wordToPdf, pdfToWordDocument } from '../utils/documentTools';
+import {
+  convertAudioFile,
+  convertVideoFile,
+  extractAudioFromVideo
+} from '../utils/mediaTools';
 import { saveConversionRecord } from '../config/firebase';
 
 interface ToolWorkspaceProps {
@@ -75,7 +91,12 @@ const ICON_MAP: Record<string, React.FC<any>> = {
   FileCode,
   FilePlus2,
   Trash2,
-  Info
+  Info,
+  Music,
+  Video,
+  Volume2,
+  Headphones,
+  Film
 };
 
 export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
@@ -150,6 +171,21 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
     width: 300,
     height: 300
   });
+
+  // Audio Converter Options
+  const [audioFormat, setAudioFormat] = useState<AudioTargetFormat>('mp3');
+  const [audioBitrate, setAudioBitrate] = useState<'128k' | '192k' | '256k' | '320k'>('192k');
+  const [audioSampleRate, setAudioSampleRate] = useState<number>(44100);
+  const [audioChannels, setAudioChannels] = useState<'auto' | '1' | '2'>('auto');
+
+  // Video Converter Options
+  const [videoFormat, setVideoFormat] = useState<VideoTargetFormat>('mp4');
+  const [videoQuality, setVideoQuality] = useState<'high' | 'medium' | 'low'>('medium');
+  const [videoResolution, setVideoResolution] = useState<'original' | '1080p' | '720p' | '480p'>('original');
+
+  // Video to Audio Options
+  const [extractAudioFormat, setExtractAudioFormat] = useState<ExtractedAudioFormat>('mp3');
+  const [extractBitrate, setExtractBitrate] = useState<'128k' | '192k' | '256k' | '320k'>('192k');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -459,6 +495,51 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
           setProgressStatus(s);
         });
         outputFileName = safeName(files[0].name, 'doc', 'extracted-document');
+      } else if (tool.id === 'audio-converter') {
+        const audioRes = await convertAudioFile(
+          files[0],
+          {
+            format: audioFormat,
+            bitrate: audioBitrate,
+            sampleRate: audioSampleRate || undefined,
+            channels: audioChannels
+          },
+          (p, s) => {
+            setProgressPercent(p);
+            setProgressStatus(s);
+          }
+        );
+        outputBlob = audioRes.blob;
+        outputFileName = audioRes.fileName;
+      } else if (tool.id === 'video-converter') {
+        const videoRes = await convertVideoFile(
+          files[0],
+          {
+            format: videoFormat,
+            quality: videoQuality,
+            resolution: videoResolution
+          },
+          (p, s) => {
+            setProgressPercent(p);
+            setProgressStatus(s);
+          }
+        );
+        outputBlob = videoRes.blob;
+        outputFileName = videoRes.fileName;
+      } else if (tool.id === 'video-to-audio') {
+        const extractRes = await extractAudioFromVideo(
+          files[0],
+          {
+            format: extractAudioFormat,
+            bitrate: extractBitrate
+          },
+          (p, s) => {
+            setProgressPercent(p);
+            setProgressStatus(s);
+          }
+        );
+        outputBlob = extractRes.blob;
+        outputFileName = extractRes.fileName;
       }
 
       if (!outputBlob) throw new Error('Processing failed to create an output file.');
@@ -659,6 +740,10 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
                     <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-zinc-200 dark:border-zinc-600">
                       {file.type.startsWith('image/') ? (
                         <FileImage className="w-5 h-5" />
+                      ) : file.type.startsWith('video/') || /\.(mp4|mov|mkv|avi|webm|flv|wmv|m4v)$/i.test(file.name) ? (
+                        <Video className="w-5 h-5" />
+                      ) : file.type.startsWith('audio/') || /\.(mp3|wav|aac|flac|ogg|m4a|wma|opus|aiff)$/i.test(file.name) ? (
+                        <Music className="w-5 h-5" />
                       ) : (
                         <FileText className="w-5 h-5" />
                       )}
@@ -1297,6 +1382,213 @@ export const ToolWorkspace: React.FC<ToolWorkspaceProps> = ({
                         className="w-full px-2 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs"
                       />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AUDIO CONVERTER SETTINGS */}
+              {tool.id === 'audio-converter' && (
+                <div className="space-y-4 bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700/60">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-2">
+                      Target Audio Format
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                      {(['mp3', 'wav', 'aac', 'flac', 'ogg', 'm4a', 'wma'] as const).map((fmt) => (
+                        <button
+                          key={fmt}
+                          type="button"
+                          onClick={() => setAudioFormat(fmt)}
+                          className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                            audioFormat === fmt
+                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.02]'
+                              : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-400'
+                          }`}
+                        >
+                          <span className="text-sm font-extrabold">{fmt}</span>
+                          <span className={`text-[9px] font-medium ${audioFormat === fmt ? 'text-indigo-100' : 'text-zinc-400'}`}>
+                            {fmt === 'mp3' && 'Universal'}
+                            {fmt === 'wav' && 'Lossless PCM'}
+                            {fmt === 'aac' && 'High Quality'}
+                            {fmt === 'flac' && 'Studio Lossless'}
+                            {fmt === 'ogg' && 'Vorbis Audio'}
+                            {fmt === 'm4a' && 'Apple Audio'}
+                            {fmt === 'wma' && 'Windows Media'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Quality / Bitrate & Sample Rate */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">
+                        Audio Bitrate
+                      </label>
+                      <select
+                        disabled={audioFormat === 'wav' || audioFormat === 'flac'}
+                        value={audioBitrate}
+                        onChange={(e) => setAudioBitrate(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200 disabled:opacity-40"
+                      >
+                        <option value="320k">320 kbps (Studio Quality)</option>
+                        <option value="256k">256 kbps (High Quality)</option>
+                        <option value="192k">192 kbps (Standard CD)</option>
+                        <option value="128k">128 kbps (Compact Web)</option>
+                      </select>
+                      {(audioFormat === 'wav' || audioFormat === 'flac') && (
+                        <p className="text-[10px] text-zinc-400 mt-1">Bitrate automatic for lossless audio</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">
+                        Sample Rate
+                      </label>
+                      <select
+                        value={audioSampleRate}
+                        onChange={(e) => setAudioSampleRate(Number(e.target.value))}
+                        className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                      >
+                        <option value={44100}>44.1 kHz (CD Standard)</option>
+                        <option value={48000}>48.0 kHz (Studio / Video)</option>
+                        <option value={22050}>22.05 kHz (Speech / Voice)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">
+                        Channels
+                      </label>
+                      <select
+                        value={audioChannels}
+                        onChange={(e) => setAudioChannels(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                      >
+                        <option value="auto">Auto (Preserve)</option>
+                        <option value="2">Stereo (2 Channels)</option>
+                        <option value="1">Mono (1 Channel)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* VIDEO CONVERTER SETTINGS */}
+              {tool.id === 'video-converter' && (
+                <div className="space-y-4 bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700/60">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-2">
+                      Target Video Format
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {(['mp4', 'mov', 'mkv', 'avi', 'webm'] as const).map((fmt) => (
+                        <button
+                          key={fmt}
+                          type="button"
+                          onClick={() => setVideoFormat(fmt)}
+                          className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                            videoFormat === fmt
+                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.02]'
+                              : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-400'
+                          }`}
+                        >
+                          <span className="text-sm font-extrabold">{fmt}</span>
+                          <span className={`text-[9px] font-medium ${videoFormat === fmt ? 'text-indigo-100' : 'text-zinc-400'}`}>
+                            {fmt === 'mp4' && 'H.264 Universal'}
+                            {fmt === 'mov' && 'QuickTime'}
+                            {fmt === 'mkv' && 'Matroska'}
+                            {fmt === 'avi' && 'Classic AVI'}
+                            {fmt === 'webm' && 'Web Stream'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">
+                        Encoding Quality
+                      </label>
+                      <select
+                        value={videoQuality}
+                        onChange={(e) => setVideoQuality(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                      >
+                        <option value="high">High Definition (Highest Clarity)</option>
+                        <option value="medium">Balanced (Standard Speed & Quality)</option>
+                        <option value="low">Compact Size (Fast Encoding)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">
+                        Resolution Scaling
+                      </label>
+                      <select
+                        value={videoResolution}
+                        onChange={(e) => setVideoResolution(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200"
+                      >
+                        <option value="original">Original Resolution (No Scaling)</option>
+                        <option value="1080p">1080p Full HD (1920x1080 max)</option>
+                        <option value="720p">720p HD (1280x720 max)</option>
+                        <option value="480p">480p SD (854x480 max)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* VIDEO TO AUDIO EXTRACTION SETTINGS */}
+              {tool.id === 'video-to-audio' && (
+                <div className="space-y-4 bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-700/60">
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-2">
+                      Extracted Audio Format
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {(['mp3', 'wav', 'aac', 'ogg', 'm4a'] as const).map((fmt) => (
+                        <button
+                          key={fmt}
+                          type="button"
+                          onClick={() => setExtractAudioFormat(fmt)}
+                          className={`px-3 py-2.5 rounded-xl text-xs font-bold uppercase transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                            extractAudioFormat === fmt
+                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-[1.02]'
+                              : 'bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-400'
+                          }`}
+                        >
+                          <span className="text-sm font-extrabold">{fmt}</span>
+                          <span className={`text-[9px] font-medium ${extractAudioFormat === fmt ? 'text-indigo-100' : 'text-zinc-400'}`}>
+                            {fmt === 'mp3' && 'Universal MP3'}
+                            {fmt === 'wav' && 'Lossless WAV'}
+                            {fmt === 'aac' && 'AAC Audio'}
+                            {fmt === 'ogg' && 'OGG Vorbis'}
+                            {fmt === 'm4a' && 'M4A Audio'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-1.5">
+                      Audio Bitrate
+                    </label>
+                    <select
+                      disabled={extractAudioFormat === 'wav'}
+                      value={extractBitrate}
+                      onChange={(e) => setExtractBitrate(e.target.value as any)}
+                      className="w-full sm:w-1/2 px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-800 dark:text-zinc-200 disabled:opacity-40"
+                    >
+                      <option value="320k">320 kbps (High Fidelity)</option>
+                      <option value="256k">256 kbps (Crystal Clear)</option>
+                      <option value="192k">192 kbps (Standard CD)</option>
+                      <option value="128k">128 kbps (Compact)</option>
+                    </select>
                   </div>
                 </div>
               )}

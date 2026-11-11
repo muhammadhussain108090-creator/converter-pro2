@@ -7,7 +7,12 @@ import {
   parsePagesToDelete,
   calculateResize,
   calculatePasswordStrength,
-  validateFileSelection
+  validateFileSelection,
+  encodePcmWav,
+  buildFFmpegAudioArgs,
+  buildFFmpegVideoArgs,
+  buildFFmpegExtractArgs,
+  getMediaMimeType
 } from './pureLogic.ts';
 
 test('formatBytes formats bytes, KB, and MB accurately', () => {
@@ -100,4 +105,75 @@ test('validateFileSelection checks size limits and file extensions', () => {
   const invalid = validateFileSelection([dummyTxt], 'merge', 50);
   assert.equal(invalid.valid, false);
   assert.match(invalid.error || '', /not a valid PDF file/);
+
+  // Audio validation
+  const dummyAudio = new File(['audio_data'], 'song.mp3', { type: 'audio/mpeg' });
+  assert.equal(validateFileSelection([dummyAudio], 'audio-converter', 50).valid, true);
+  assert.equal(validateFileSelection([dummyTxt], 'audio-converter', 50).valid, false);
+
+  // Video validation
+  const dummyVideo = new File(['video_data'], 'clip.mp4', { type: 'video/mp4' });
+  assert.equal(validateFileSelection([dummyVideo], 'video-converter', 50).valid, true);
+  assert.equal(validateFileSelection([dummyVideo], 'video-to-audio', 50).valid, true);
+  assert.equal(validateFileSelection([dummyTxt], 'video-converter', 50).valid, false);
+});
+
+test('encodePcmWav generates valid 16-bit stereo and mono RIFF WAVE files', () => {
+  const sampleRate = 44100;
+  const left = new Float32Array(100);
+  left[0] = 0.5;
+  left[1] = -0.5;
+
+  // Mono encoding
+  const monoWav = encodePcmWav(left, null, sampleRate);
+  assert.equal(monoWav.length, 44 + 100 * 2); // 44 header + 200 data
+  const monoHeader = String.fromCharCode(...monoWav.slice(0, 4));
+  assert.equal(monoHeader, 'RIFF');
+  const monoFormat = String.fromCharCode(...monoWav.slice(8, 12));
+  assert.equal(monoFormat, 'WAVE');
+
+  // Stereo encoding
+  const right = new Float32Array(100);
+  const stereoWav = encodePcmWav(left, right, sampleRate);
+  assert.equal(stereoWav.length, 44 + 100 * 4); // 44 header + 400 data
+});
+
+test('buildFFmpegAudioArgs constructs proper arguments for audio codecs', () => {
+  const mp3Args = buildFFmpegAudioArgs('in.wav', 'out.mp3', 'mp3', { bitrate: '320k' });
+  assert.deepEqual(mp3Args, ['-i', 'in.wav', '-vn', '-c:a', 'libmp3lame', '-b:a', '320k', 'out.mp3']);
+
+  const flacArgs = buildFFmpegAudioArgs('in.mp3', 'out.flac', 'flac');
+  assert.deepEqual(flacArgs, ['-i', 'in.mp3', '-vn', '-c:a', 'flac', 'out.flac']);
+
+  const oggArgs = buildFFmpegAudioArgs('in.m4a', 'out.ogg', 'ogg', { bitrate: '192k' });
+  assert.deepEqual(oggArgs, ['-i', 'in.m4a', '-vn', '-c:a', 'libvorbis', '-b:a', '192k', 'out.ogg']);
+});
+
+test('buildFFmpegVideoArgs constructs proper arguments for video formats', () => {
+  const mp4Args = buildFFmpegVideoArgs('in.mov', 'out.mp4', 'mp4', { quality: 'high', resolution: '720p' });
+  assert.ok(mp4Args.includes('-vf'));
+  assert.ok(mp4Args.includes('scale=-2:720'));
+  assert.ok(mp4Args.includes('libx264'));
+  assert.equal(mp4Args[mp4Args.length - 1], 'out.mp4');
+
+  const webmArgs = buildFFmpegVideoArgs('in.mp4', 'out.webm', 'webm');
+  assert.ok(webmArgs.includes('libvpx'));
+  assert.equal(webmArgs[webmArgs.length - 1], 'out.webm');
+});
+
+test('buildFFmpegExtractArgs constructs extraction arguments', () => {
+  const extractMp3 = buildFFmpegExtractArgs('in.mp4', 'out.mp3', 'mp3', { bitrate: '256k' });
+  assert.deepEqual(extractMp3, ['-i', 'in.mp4', '-vn', '-c:a', 'libmp3lame', '-b:a', '256k', 'out.mp3']);
+
+  const extractWav = buildFFmpegExtractArgs('in.mkv', 'out.wav', 'wav');
+  assert.deepEqual(extractWav, ['-i', 'in.mkv', '-vn', '-c:a', 'pcm_s16le', 'out.wav']);
+});
+
+test('getMediaMimeType returns correct content types', () => {
+  assert.equal(getMediaMimeType('mp3'), 'audio/mpeg');
+  assert.equal(getMediaMimeType('wav'), 'audio/wav');
+  assert.equal(getMediaMimeType('flac'), 'audio/flac');
+  assert.equal(getMediaMimeType('mp4'), 'video/mp4');
+  assert.equal(getMediaMimeType('webm'), 'video/webm');
+  assert.equal(getMediaMimeType('mov'), 'video/quicktime');
 });

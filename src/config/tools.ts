@@ -191,5 +191,41 @@ export const TOOLS: Tool[] = [
     acceptAttribute: '.pdf,application/pdf',
     maxFiles: 1,
     technicalNote: 'Browser-based conversion extracts textual content and structure into an editable Word document. Complex multi-column graphic layouts or scanned images without embedded text require specialized OCR engines.'
+  },
+  {
+    id: 'audio-converter',
+    name: 'Audio Converter',
+    shortDesc: 'Convert audio between MP3, WAV, AAC, FLAC, OGG, M4A, and WMA.',
+    desc: 'Upload audio files and transcode them directly in your browser. Choose between MP3, WAV, AAC, FLAC, OGG, M4A, or WMA with custom bitrate and sample rate options.',
+    category: 'Audio',
+    icon: 'Music',
+    tag: 'New',
+    acceptedTypes: ['audio/*', '.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a', '.wma', '.opus', '.aiff', '.weba'],
+    acceptAttribute: 'audio/*,.mp3,.wav,.aac,.flac,.ogg,.m4a,.wma,.opus,.aiff',
+    maxFiles: 1
+  },
+  {
+    id: 'video-converter',
+    name: 'Video Converter',
+    shortDesc: 'Convert video between MP4, MOV, MKV, AVI, and WebM.',
+    desc: 'Transcode video formats with genuine in-browser FFmpeg encoding. Choose target container (MP4, MOV, MKV, AVI, WebM), resolution scaling, and compression presets.',
+    category: 'Video',
+    icon: 'Video',
+    tag: 'New',
+    acceptedTypes: ['video/*', '.mp4', '.mov', '.mkv', '.avi', '.webm', '.flv', '.wmv', '.m4v'],
+    acceptAttribute: 'video/*,.mp4,.mov,.mkv,.avi,.webm,.flv,.wmv',
+    maxFiles: 1
+  },
+  {
+    id: 'video-to-audio',
+    name: 'Video to Audio',
+    shortDesc: 'Extract audio tracks from video into MP3, WAV, AAC, OGG, or M4A.',
+    desc: 'Extract audio streams from MP4, MOV, MKV, AVI, or WebM video files into high-quality MP3, WAV, AAC, OGG, or M4A sound files.',
+    category: 'Audio',
+    icon: 'Volume2',
+    tag: 'Popular',
+    acceptedTypes: ['video/*', '.mp4', '.mov', '.mkv', '.avi', '.webm'],
+    acceptAttribute: 'video/*,.mp4,.mov,.mkv,.avi,.webm',
+    maxFiles: 1
   }
 ];

@@ -159,6 +159,7 @@ export default function App() {
 
         {currentView === 'tool' && (
           <ToolWorkspace
+            key={activeTool.id}
             tool={activeTool}
             onBack={() => handleNavigate('home')}
             onShowNotice={showNotice}
